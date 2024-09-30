@@ -1,0 +1,10 @@
+set terminal pngcairo
+set output fileout
+set logscale y
+set title "Residuals"
+set ylabel 'Residual'
+set xlabel 'Iteration'
+plot "< cat interfoam.out | grep 'Solving for k' | cut -d' ' -f13 | tr -d ','" title 'k' with lines,\
+"< cat interfoam.out | grep 'Solving for epsilon' | cut -d' ' -f13 | tr -d ','" title 'epsilon' with lines
+
+set output

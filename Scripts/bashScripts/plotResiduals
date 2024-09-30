@@ -1,0 +1,4 @@
+gnuplot -p -e 'fileout="Resid_turb.png"' GNUscripts/Residuals_turb
+gnuplot -p -e 'fileout="Resid_pressure.png"' GNUscripts/Residuals_pressure
+gnuplot -p -e 'fileout="Resid_alpha.png"' GNUscripts/Residuals_alpha
+

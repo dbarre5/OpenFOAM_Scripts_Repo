@@ -1,0 +1,6 @@
+rm -r constant/polyMesh
+extrude2DMesh MeshedSurface -overwrite
+extrudeMesh
+snappyHexMesh -overwrite
+
+

@@ -1,0 +1,24 @@
+cp system/controlDictOrig system/controlDict
+awk -F '[,\t]' '{ printf("(%s %s %.2f)\n", $1, $2, $3) }' centerlineprobes.csv > tmpfile
+sed -i -e "/centerlineProbesFileContents/{r tmpfile" -e 'd' -e '}' system/controlDict
+rm tmpfile
+
+
+awk -F '[,\t]' '{ printf("(%s %s %.2f)\n", $1, $2, $3) }' 37_slice_probes.csv > tmpfile
+sed -i -e "/37ProbesFileContents/{r tmpfile" -e 'd' -e '}' system/controlDict
+rm tmpfile
+
+
+awk -F '[,\t]' '{ printf("(%s %s %.2f)\n", $1, $2, $3) }' 103_slice_probes.csv > tmpfile
+sed -i -e "/103ProbesFileContents/{r tmpfile" -e 'd' -e '}' system/controlDict
+rm tmpfile
+
+
+awk -F '[,\t]' '{ printf("(%s %s %.2f)\n", $1, $2, $3) }' downstream0p5_slice_probes.csv > tmpfile
+sed -i -e "/0p5ProbesFileContents/{r tmpfile" -e 'd' -e '}' system/controlDict
+rm tmpfile
+
+
+awk -F '[,\t]' '{ printf("(%s %s %.2f)\n", $1, $2, $3) }' 20_20_8_output.csv > tmpfile
+sed -i -e "/fullDomainProbesFileContents/{r tmpfile" -e 'd' -e '}' system/controlDict
+rm tmpfile

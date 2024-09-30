@@ -1,0 +1,9 @@
+set terminal pngcairo
+set output fileout
+set logscale y
+set title "Residuals"
+set ylabel 'Residual'
+set xlabel 'Iteration'
+plot "< cat interfoam.out | grep 'Solving for alpha.water' | cut -d' ' -f13 | tr -d ','" title 'alpha.water' with lines
+
+set output
