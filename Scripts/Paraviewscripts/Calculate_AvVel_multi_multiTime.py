@@ -49,6 +49,7 @@ if use_csv:
     file_path = os.path.join(output_directory, filename)
     # Load the data from the CSV file
     points = np.loadtxt(file_path, delimiter=',')
+    numPoints = len(points)
 
     # Ensure the data has 3 columns (optional, if guaranteed by your file structure)
     if points.shape[1] != 3:
@@ -233,38 +234,47 @@ if Line == True:
     tick_positions = np.linspace(0, num_cases - 1, num_ticks, dtype=int)
     tick_labels = [case_labels[i] for i in tick_positions]
 
-    # Plot 1: Depth (alpha_arc_integral)
+    # For Depth (alpha_arc_integral)
     plt.figure()
+    y_min_depth = np.min([case_data[:, 4].min() for case_data in case_data_storage_list])
+    y_max_depth = np.max([case_data[:, 4].max() for case_data in case_data_storage_list])
+    y_buffer_depth = 0.05 * (y_max_depth - y_min_depth)  # 5% buffer
+    plt.ylim(y_min_depth - y_buffer_depth, y_max_depth + y_buffer_depth)  # Set y-limits with buffer
+
     for i, case_data in enumerate(case_data_storage_list):
         plt.plot(case_data[:, 0], case_data[:, 4], color=colors[i])
     plt.xlabel('Relative Position along the Line (%)')
     plt.ylabel('Depth')
-    plt.title('Depth vs Relative Position along the Line for '+plotName)
+    plt.title('Depth vs Relative Position along the Line for ' + plotName)
     plt.xlim(0, 100)  # Set x-axis limits from 0 to 100
     plt.grid(False)
 
-    # Add color bar with 10 evenly spaced labels
+    # Add color bar
     sm = plt.cm.ScalarMappable(cmap=cm.viridis, norm=plt.Normalize(vmin=0, vmax=num_cases - 1))
     cbar = plt.colorbar(sm, ticks=tick_positions)
-    cbar.ax.set_yticklabels(tick_labels)  # Use the 10 interpolated case labels
+    cbar.ax.set_yticklabels(tick_labels)
     cbar.set_label('Time')
 
     png_filename = os.path.join(output_directory, "depth_plot.png")
     plt.savefig(png_filename, bbox_inches='tight')
     plt.close()
 
-    # Repeat for each plot, adjusting the y-axis label accordingly
-    # Plot 2: Depth-Averaged Velocity
+    # Repeat for Depth-Averaged Velocity
     plt.figure()
+    y_min_velocity = np.min([case_data[:, 5].min() for case_data in case_data_storage_list])
+    y_max_velocity = np.max([case_data[:, 5].max() for case_data in case_data_storage_list])
+    y_buffer_velocity = 0.05 * (y_max_velocity - y_min_velocity)  # 5% buffer
+    plt.ylim(y_min_velocity - y_buffer_velocity, y_max_velocity + y_buffer_velocity)  # Set y-limits with buffer
+
     for i, case_data in enumerate(case_data_storage_list):
         plt.plot(case_data[:, 0], case_data[:, 5], color=colors[i])
     plt.xlabel('Relative Position along the Line (%)')
     plt.ylabel('Depth-Averaged Velocity (m/s)')
-    plt.title('Depth-Averaged Velocity vs Relative Position for '+plotName)
+    plt.title('Depth-Averaged Velocity vs Relative Position for ' + plotName)
     plt.xlim(0, 100)  # Set x-axis limits from 0 to 100
     plt.grid(False)
 
-    # Color bar with 10 evenly spaced labels
+    # Add color bar
     sm = plt.cm.ScalarMappable(cmap=cm.viridis, norm=plt.Normalize(vmin=0, vmax=num_cases - 1))
     cbar = plt.colorbar(sm, ticks=tick_positions)
     cbar.ax.set_yticklabels(tick_labels)
@@ -274,17 +284,22 @@ if Line == True:
     plt.savefig(png_filename, bbox_inches='tight')
     plt.close()
 
-    # Plot 3: Froude Number
+    # Repeat for Froude Number
     plt.figure()
+    y_min_froude = np.min([case_data[:, 6].min() for case_data in case_data_storage_list])
+    y_max_froude = np.max([case_data[:, 6].max() for case_data in case_data_storage_list])
+    y_buffer_froude = 0.05 * (y_max_froude - y_min_froude)  # 5% buffer
+    plt.ylim(y_min_froude - y_buffer_froude, y_max_froude + y_buffer_froude)  # Set y-limits with buffer
+
     for i, case_data in enumerate(case_data_storage_list):
         plt.plot(case_data[:, 0], case_data[:, 6], color=colors[i])
     plt.xlabel('Relative Position along the Line (%)')
     plt.ylabel('Froude Number')
-    plt.title('Froude Number vs Relative Position for '+plotName)
+    plt.title('Froude Number vs Relative Position for ' + plotName)
     plt.xlim(0, 100)  # Set x-axis limits from 0 to 100
     plt.grid(False)
 
-    # Color bar with 10 evenly spaced labels
+    # Add color bar
     sm = plt.cm.ScalarMappable(cmap=cm.viridis, norm=plt.Normalize(vmin=0, vmax=num_cases - 1))
     cbar = plt.colorbar(sm, ticks=tick_positions)
     cbar.ax.set_yticklabels(tick_labels)
