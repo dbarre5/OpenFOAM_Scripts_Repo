@@ -1,3 +1,5 @@
+All tested in 5.11.0
+
 Calculate_AvVel-
 	Creates a map of depth averaged velocity, depth, and Fr by resampling your domain on a specified grid.
 	You can edit the (GridNumX = 100 GridNumY = 100 GridNumZ = 110) at top of file to change resolution
