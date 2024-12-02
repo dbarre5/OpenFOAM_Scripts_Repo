@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-cases = ["mesh1", "mesh2"]
+cases = ["Ubend0.2","Ubend0.2_2"]
 
 # User inputs vertical direction: 0 for x, 1 for y, 2 for z
 vertical_direction = 2
@@ -14,7 +14,7 @@ vertical_direction = 2
 
 
 # Specify the desired time step (e.g., 'latest' or a specific time like 10.0)
-desired_time = 2000
+desired_time = 47.2
 
 ########################## GRID OPTIONS
 grid = False
@@ -28,8 +28,8 @@ num_y_points = 50  # Number of points along the y-axis
 
 Line = True
 #Create distribution of points between point 1 and point 2 for depth calculation
-Point1=[548.,381.6,0]
-Point2=[743.,395.,0]
+Point1=[0.0,-0.4,0]
+Point2=[1.8,-0.4,0]
 
 #Point1=[1842.47,1429.29,0]
 #Point2=[1842.47,961.,0]
@@ -42,7 +42,7 @@ Point2=[743.,395.,0]
 
 #Point1=[2041.,1446.0,0]
 #Point2=[2088.,1446.,0]
-numPoints = 40 # distribution of points between point 1 and point 2 to be vertically integrated based off of vertical direction
+numPoints = 100 # distribution of points between point 1 and point 2 to be vertically integrated based off of vertical direction
 
 
 # Use the current directory in which ParaView was started
@@ -123,6 +123,10 @@ if Line == True:
         total_sumX = 0.0
         total_sumY = 0.0
 
+        # Create a list to store Umag and yValue for each point
+        umag_list = []
+        y_value_list = []
+
         # Loop through the data to calculate the integrals
         for i in range(1, len(U)):
             if not np.isnan(U_x[i]) and not np.isnan(arc_length[i]) and not np.isnan(arc_length[i-1]):
@@ -130,6 +134,15 @@ if Line == True:
                 total_sum += differential_length*alpha_water[i]
                 total_sumX += U_x[i] * differential_length
                 total_sumY += U_y[i] * differential_length
+                Ux = U_x[i] * alpha_water[i]
+                Ux = U_y[i] * alpha_water[i]
+                Umag = np.sqrt((U_x[i]* alpha_water[i])**2 + (U_y[i]* alpha_water[i])**2)
+
+                yValue = arc_length[i]
+
+                # Append Umag and arc_length (yValue) for later use
+                umag_list.append(Umag)
+                y_value_list.append(arc_length[i])
 
         # Compute the depth-averaged velocities if depth is greater than zero
         if total_sum > 0.0:
@@ -155,6 +168,10 @@ if Line == True:
         output.FieldData.append(total_sum, 'alpha_arc_integral')  # Total depth
         output.FieldData.append(np.array([depth_avg_velocity]), 'depth_avg_velocity')  # Depth-averaged velocity as a vector
         output.FieldData.append(froude_number, 'froude_number')  # Froude number
+        #OUTPUT THE UMAG and Y LIST HERE
+        # Append Umag and yValue (arc length) to output for visualization later
+        output.FieldData.append(np.array(umag_list), 'velocity_magnitude')  # List of velocity magnitudes (Umag)
+        output.FieldData.append(np.array(y_value_list), 'arc_length_values')  # List of arc lengths (yValues)
         """
 
         # Prepare a list to hold processed results
@@ -214,13 +231,25 @@ if Line == True:
                 alpha_arc_integral = field_data.GetArray('alpha_arc_integral').GetValue(0)
                 depth_avg_velocity = field_data.GetArray('depth_avg_velocity').GetTuple(0)  # Fetch as a tuple
                 froude_number = field_data.GetArray('froude_number').GetValue(0)
+                yValList=field_data.GetArray('arc_length_values')
+                VelList=field_data.GetArray('velocity_magnitude')
+                # Initialize empty lists to store values
+                y_values = []
+                velocities = []
+
+                # Iterate through the VTK arrays and get values
+                for i in range(yValList.GetNumberOfValues()):
+                    y_values.append(yValList.GetValue(i))
+                    
+                for i in range(VelList.GetNumberOfValues()):
+                    velocities.append(VelList.GetValue(i))
                 
                 # Store depth_avg_velocity as a magnitude
                 depth_avg_velocity_mag = np.sqrt(depth_avg_velocity[0]**2 + depth_avg_velocity[1]**2)
                 
-                results.append([relative_position, x, y, z, alpha_arc_integral, depth_avg_velocity_mag, froude_number])
+                results.append([relative_position, x, y, z, alpha_arc_integral, depth_avg_velocity_mag, froude_number, y_values, velocities])
             else:
-                results.append([relative_position, x, y, z, 0, 0, 0])  # Assign 0 if no data is found
+                results.append([relative_position, x, y, z, 0, 0, 0, 0, 0])  # Assign 0 if no data is found
 
             # Time tracking for profiling
             if (len(results) % 10 == 0):  # Print every 10 points for reduced output
@@ -231,10 +260,21 @@ if Line == True:
         data_storage = np.array(results)
         case_data_storage_list.append(data_storage)
 
+
+        sliced_data_storage = data_storage[:, 0:7]
+        # Convert the sliced data to a format that can be saved to CSV
+        # Flatten any lists (if necessary) or remove them from the data
+        flattened_data_storage = []
+        for row in sliced_data_storage:
+            # Here we assume that y_values and velocities are in the 7th column (index 6) and need to be excluded
+            flattened_data_storage.append(row)
+
+        # Convert to a numpy array
+        flattened_data_storage = np.array(flattened_data_storage)
         # Save data_storage to CSV, updated with new columns
         csv_filename = os.path.join(output_directory, "results.csv")
         try:
-            np.savetxt(csv_filename, data_storage, delimiter=",", header="Relative Position along the Line (%),x,y,z,alpha_arc_integral,depth_avg_velocity,Froude_number", comments="")
+            np.savetxt(csv_filename, flattened_data_storage, delimiter=",", header="Relative Position along the Line (%),x,y,z,alpha_arc_integral,depth_avg_velocity,Froude_number", comments="")
             print(f"Results saved to {csv_filename}")
         except Exception as e:
             print(f"Error saving CSV file: {e}")
@@ -283,6 +323,43 @@ if Line == True:
     plt.grid(True)
     plt.legend()
     png_filename = os.path.join(output_directory, "froude_number_plot.png")
+    plt.savefig(png_filename)
+    plt.close()
+
+    # Flatten the data properly by ensuring the lengths of X, Y, and Z match
+    X_flat = []
+    Y_flat = []
+    Z_flat = []
+
+    # Iterate over the data to flatten it
+    for i, case_data in enumerate(case_data_storage_list):
+        x = case_data[:, 0]  # Relative position or x-coordinate
+        y = case_data[:, 7]  # List of y-values (arc lengths)
+        z = case_data[:, 8]  # List of z-values (velocity magnitudes)
+
+        # Repeat the x-values for each y and z value
+        for xi, yi, zi in zip(x, y, z):
+            X_flat.extend([xi] * len(yi))  # Repeat xi for each value in yi
+            Y_flat.extend(yi)  # Add all values from yi
+            Z_flat.extend(zi)  # Add all values from zi
+
+    # Convert to numpy arrays for consistency
+    X_flat = np.array(X_flat)
+    Y_flat = np.array(Y_flat)
+    Z_flat = np.array(Z_flat)
+
+    # Now they should be 1D arrays with the same length
+    print(len(X_flat), len(Y_flat), len(Z_flat))  # Verify lengths
+
+    # Handle Inf values (e.g., remove corresponding data points)
+    # Plotting using tricontourf for scattered data
+    plt.figure(figsize=(8, 6))
+    contour = plt.tricontourf(X_flat, Y_flat, Z_flat, 20, cmap='viridis')  # Contour plot for scattered data
+    plt.colorbar(contour)
+    plt.xlabel("Percentage along the line (X)")
+    plt.ylabel("Vertical Location(Y)")
+    plt.title("Velocity contour plot for "+cases[caseNum])
+    png_filename = os.path.join(output_directory, "Velocity contour plot for "+cases[caseNum]+".png")
     plt.savefig(png_filename)
     plt.close()
 
