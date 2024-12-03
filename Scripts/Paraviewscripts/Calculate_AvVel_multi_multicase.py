@@ -5,6 +5,8 @@ from paraview.simple import *
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import matplotlib.colors as mcolors
+import matplotlib.cm
 
 cases = ["Ubend0.2","Ubend0.2_2"]
 
@@ -67,6 +69,7 @@ if use_csv:
         raise ValueError("The CSV file does not have exactly 3 columns. Add a column fille with zeros (or any number) for your vertical coordinate")
 
 
+
 if Line == True:
     #initalize the data_storage for all cases to plot later
     case_data_storage_list = []
@@ -126,6 +129,8 @@ if Line == True:
         # Create a list to store Umag and yValue for each point
         umag_list = []
         y_value_list = []
+        alpha_list = []
+        air_location = []
 
         # Loop through the data to calculate the integrals
         for i in range(1, len(U)):
@@ -143,6 +148,9 @@ if Line == True:
                 # Append Umag and arc_length (yValue) for later use
                 umag_list.append(Umag)
                 y_value_list.append(arc_length[i])
+                if alpha_water[i] < 0.01:
+                    alpha_list.append(alpha_water[i])
+                    air_location.append(arc_length[i])
 
         # Compute the depth-averaged velocities if depth is greater than zero
         if total_sum > 0.0:
@@ -168,10 +176,14 @@ if Line == True:
         output.FieldData.append(total_sum, 'alpha_arc_integral')  # Total depth
         output.FieldData.append(np.array([depth_avg_velocity]), 'depth_avg_velocity')  # Depth-averaged velocity as a vector
         output.FieldData.append(froude_number, 'froude_number')  # Froude number
+
+
         #OUTPUT THE UMAG and Y LIST HERE
         # Append Umag and yValue (arc length) to output for visualization later
         output.FieldData.append(np.array(umag_list), 'velocity_magnitude')  # List of velocity magnitudes (Umag)
         output.FieldData.append(np.array(y_value_list), 'arc_length_values')  # List of arc lengths (yValues)
+        output.FieldData.append(np.array(alpha_list), 'water_fraction')  # List of waters
+        output.FieldData.append(np.array(air_location), 'air_loc')  # List of air location
         """
 
         # Prepare a list to hold processed results
@@ -233,9 +245,13 @@ if Line == True:
                 froude_number = field_data.GetArray('froude_number').GetValue(0)
                 yValList=field_data.GetArray('arc_length_values')
                 VelList=field_data.GetArray('velocity_magnitude')
+                alphaList=field_data.GetArray('water_fraction')
+                airLocList=field_data.GetArray('air_loc')
                 # Initialize empty lists to store values
                 y_values = []
                 velocities = []
+                alphas=[]
+                airLocs=[]
 
                 # Iterate through the VTK arrays and get values
                 for i in range(yValList.GetNumberOfValues()):
@@ -244,12 +260,18 @@ if Line == True:
                 for i in range(VelList.GetNumberOfValues()):
                     velocities.append(VelList.GetValue(i))
                 
+                for i in range(alphaList.GetNumberOfValues()):
+                    alphas.append(alphaList.GetValue(i))
+                for i in range(airLocList.GetNumberOfValues()):
+                    airLocs.append(airLocList.GetValue(i))
+                
+                
                 # Store depth_avg_velocity as a magnitude
                 depth_avg_velocity_mag = np.sqrt(depth_avg_velocity[0]**2 + depth_avg_velocity[1]**2)
                 
-                results.append([relative_position, x, y, z, alpha_arc_integral, depth_avg_velocity_mag, froude_number, y_values, velocities])
+                results.append([relative_position, x, y, z, alpha_arc_integral, depth_avg_velocity_mag, froude_number, y_values, velocities,alphas,airLocs])
             else:
-                results.append([relative_position, x, y, z, 0, 0, 0, 0, 0])  # Assign 0 if no data is found
+                results.append([relative_position, x, y, z, 0, 0, 0, 0, 0,0,0])  # Assign 0 if no data is found
 
             # Time tracking for profiling
             if (len(results) % 10 == 0):  # Print every 10 points for reduced output
@@ -278,11 +300,112 @@ if Line == True:
             print(f"Results saved to {csv_filename}")
         except Exception as e:
             print(f"Error saving CSV file: {e}")
-            
-    # Generate case labels from the cases list
+
+        ###################CONTOUR PLOTS
+        ###################CONTOUR PLOTS
+        ###################CONTOUR PLOTS
+        ###################CONTOUR PLOTS
+        ###################CONTOUR PLOTS
+        ###################CONTOUR PLOTS
+        # Flatten the data properly by ensuring the lengths of X, Y, and Z match
+        # Flatten the data properly by ensuring the lengths of X, Y, and Z match
+        X_flat = []
+        Y_flat = []
+        Z_flat = []
+        X_flat2 = []
+        alpha_flat = []
+        airLoc_flat = []
+
+        # Iterate over the data to flatten it
+        for i, case_data in enumerate(case_data_storage_list):
+            x = case_data[:, 0]  # Relative position or x-coordinate
+            y = case_data[:, 7]  # List of y-values (arc lengths)
+            z = case_data[:, 8]  # List of z-values (velocity magnitudes)
+            alpha = case_data[:, 9]
+            airLoc = case_data[:, 10]
+
+            # Repeat the x-values for each y and z value
+            for xi, yi, zi, alphai,airLoci in zip(x, y, z, alpha,airLoc):
+                X_flat.extend([xi] * len(yi))  # Repeat xi for each value in yi
+                Y_flat.extend(yi)  # Add all values from yi
+                Z_flat.extend(zi)  # Add all values from zi
+                X_flat2.extend([xi] * len(airLoci))  # Repeat xi for each value in yi
+                alpha_flat.extend(alphai)  # Add all values from alphai
+                airLoc_flat.extend(airLoci)  # Add all values from alphai
+
+        # Convert to numpy arrays for consistency
+        X_flat = np.array(X_flat)
+        X_flat2 = np.array(X_flat2)
+        Y_flat = np.array(Y_flat)
+        Z_flat = np.array(Z_flat)
+        alpha_flat = np.array(alpha_flat)
+        airLoc_flat = np.array(airLoc_flat)
+
+        # Now they should be 1D arrays with the same length
+        print(len(X_flat), len(Y_flat), len(Z_flat), len(alpha_flat),len(airLoc_flat), len(X_flat2))  # Verify lengths
+
+        # Handle Inf values (e.g., remove corresponding data points)
+        # Filter out NaN or Inf values
+        valid_indices = np.isfinite(X_flat) & np.isfinite(Y_flat) & np.isfinite(Z_flat) 
+        X_flat = X_flat[valid_indices]
+        Y_flat = Y_flat[valid_indices]
+        Z_flat = Z_flat[valid_indices]
+        #alpha_flat = alpha_flat[valid_indices]
+        #airLoc_flat = airLoc_flat[valid_indices]
+
+
+        # Plotting using tricontourf for scattered data
+        # Plotting using tricontourf for scattered data
+        fig, ax = plt.subplots(figsize=(18, 6))  # Define the figure and axes for plotting
+        #plt.figure(figsize=(18, 6))
+
+        # Contour plot for velocity magnitude (Z_flat)
+        contour = plt.tricontourf(X_flat, Y_flat, Z_flat, 20, cmap='viridis')  # Contour plot for velocity magnitude
+        cbar = plt.colorbar(contour)
+        cbar.set_label('Velocity Magnitude, m/s')  # Customize the label for the color bar
+
+        # Contour plot for alpha (transparency), with varying alpha values
+        contour_alpha = plt.tricontourf(X_flat2, airLoc_flat, alpha_flat, 20, colors=['white'], alpha=1)
+
+        # Add labels and title
+        plt.xlabel("Percentage along the line (%)")
+        plt.ylabel("Vertical Location (m)")
+        plt.title(f"Velocity contour plot for {cases[caseNum]}")
+
+        # Now, use x_values = case_data[:, 0] for the rainbow-colored line
+        x_values = case_data[:, 0]  # This is the data for the rainbow-colored line
+        norm = plt.Normalize(0,100)  # Normalize x_values
+        cmap = plt.cm.inferno  # Use rainbow colormap
+
+        # Create the plot and colorbar as before
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])  # We don't need actual data for the colorbar
+
+        # Define a custom axes for the colorbar using add_axes
+        cbar_ax = fig.add_axes([0.1, 0.1, 0.7, 0.02])  # [left, bottom, width, height]
+        fig.colorbar(sm, cax=cbar_ax, orientation="horizontal")
+
+
+        # Adjust the plot to leave space for the rainbow line under the x-axis
+        plt.subplots_adjust(bottom=0.0)  # Adjust bottom to fit the rainbow line
+
+        # Adjust the plot layout to remove excess whitespace
+        plt.subplots_adjust(left=0.05, right=1.0, bottom=0.3)  # Adjust margins to reduce whitespace
+
+        # Save the plot
+        png_filename = os.path.join(output_directory, f"Velocity contour plot for {cases[caseNum]}.png")
+        plt.savefig(png_filename)
+        plt.close()
+        # Generate case labels from the cases list
+
+        ###################CONTOUR PLOTS
+        ###################CONTOUR PLOTS
+        ###################CONTOUR PLOTS
+        ###################CONTOUR PLOTS
+
     case_labels = [case.capitalize() for case in cases]  # Capitalize case names for labels
     num_cases = len(cases)  # Number of cases
-
+    ###################CONTOUR PLOTS
 
     # Plot 1: Depth (alpha_arc_integral)
     plt.figure()
@@ -326,42 +449,7 @@ if Line == True:
     plt.savefig(png_filename)
     plt.close()
 
-    # Flatten the data properly by ensuring the lengths of X, Y, and Z match
-    X_flat = []
-    Y_flat = []
-    Z_flat = []
-
-    # Iterate over the data to flatten it
-    for i, case_data in enumerate(case_data_storage_list):
-        x = case_data[:, 0]  # Relative position or x-coordinate
-        y = case_data[:, 7]  # List of y-values (arc lengths)
-        z = case_data[:, 8]  # List of z-values (velocity magnitudes)
-
-        # Repeat the x-values for each y and z value
-        for xi, yi, zi in zip(x, y, z):
-            X_flat.extend([xi] * len(yi))  # Repeat xi for each value in yi
-            Y_flat.extend(yi)  # Add all values from yi
-            Z_flat.extend(zi)  # Add all values from zi
-
-    # Convert to numpy arrays for consistency
-    X_flat = np.array(X_flat)
-    Y_flat = np.array(Y_flat)
-    Z_flat = np.array(Z_flat)
-
-    # Now they should be 1D arrays with the same length
-    print(len(X_flat), len(Y_flat), len(Z_flat))  # Verify lengths
-
-    # Handle Inf values (e.g., remove corresponding data points)
-    # Plotting using tricontourf for scattered data
-    plt.figure(figsize=(8, 6))
-    contour = plt.tricontourf(X_flat, Y_flat, Z_flat, 20, cmap='viridis')  # Contour plot for scattered data
-    plt.colorbar(contour)
-    plt.xlabel("Percentage along the line (X)")
-    plt.ylabel("Vertical Location(Y)")
-    plt.title("Velocity contour plot for "+cases[caseNum])
-    png_filename = os.path.join(output_directory, "Velocity contour plot for "+cases[caseNum]+".png")
-    plt.savefig(png_filename)
-    plt.close()
+    
 
 
 
