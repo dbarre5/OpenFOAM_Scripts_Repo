@@ -14,7 +14,7 @@ vertical_direction = 2
 
 
 # Specify the desired time step (e.g., 'latest' or a specific time like 10.0)
-desired_time = 100
+desired_time = 47.2
 
 ########################## GRID OPTIONS
 grid = False
@@ -118,7 +118,7 @@ if Line == True:
         # Extract horizontal components based on user input
         U_x = U[:, 0]  # X component of velocity
         U_y = U[:, 1]  # Y component of velocity
-        U_x = U[:, 2]  # Z component of velocity
+        U_z = U[:, 2]  # Z component of velocity
 
         # Initialize sums for alpha_water and velocity components
         total_sum = 0.0
@@ -140,7 +140,7 @@ if Line == True:
                 total_sumY += U_y[i] * differential_length
                 Ux = U_x[i] * alpha_water[i]
                 Uy = U_y[i] * alpha_water[i]
-                Umag = np.sqrt((U_x[i]* alpha_water[i])**2 + (U_y[i]* alpha_water[i])**2+U_z[i]* alpha_water[i])**2)
+                Umag = np.sqrt((U_x[i]* alpha_water[i])**2 + (U_y[i]* alpha_water[i])**2+(U_z[i]* alpha_water[i])**2)
 
                 yValue = arc_length[i]
 
@@ -361,13 +361,13 @@ if Line == True:
         #plt.figure(figsize=(18, 6))
 
         # Contour plot for velocity magnitude (Z_flat)
-        contour = plt.tricontourf(X_flat, Y_flat, Z_flat, 20, cmap='viridis')  # Contour plot for velocity magnitude
+        contour = plt.tricontourf(X_flat, Y_flat, Z_flat, 200, cmap='viridis')  # Contour plot for velocity magnitude
         # Add black contour lines
-        num_black_contours = 5  # Number of black contour lines
-        contour_levels = np.linspace(np.min(Z_flat), np.max(Z_flat), num_black_contours)  # Define levels for the black contours
-
-        # Create black contour lines
-        black_contour = plt.tricontour(X_flat, Y_flat, Z_flat, levels=contour_levels, colors='black', linewidths=1)
+        #num_black_contours = 5  # Number of black contour lines
+        #contour_levels = np.linspace(np.min(Z_flat), np.max(Z_flat), num_black_contours)  # Define levels for the black contours
+#
+        ## Create black contour lines
+        #black_contour = plt.tricontour(X_flat, Y_flat, Z_flat, levels=contour_levels, colors='black', linewidths=1)
 
         cbar = plt.colorbar(contour)
         cbar.set_label('Velocity Magnitude, m/s')  # Customize the label for the color bar
