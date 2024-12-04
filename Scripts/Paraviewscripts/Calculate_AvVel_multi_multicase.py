@@ -1,5 +1,3 @@
-
-
 import os
 from paraview.simple import *
 import numpy as np
@@ -8,7 +6,7 @@ import time
 import matplotlib.colors as mcolors
 import matplotlib.cm
 
-cases = ["Ubend0.2","Ubend0.2_2"]
+cases = ["Ubend0.2"]
 
 # User inputs vertical direction: 0 for x, 1 for y, 2 for z
 vertical_direction = 2
@@ -16,7 +14,7 @@ vertical_direction = 2
 
 
 # Specify the desired time step (e.g., 'latest' or a specific time like 10.0)
-desired_time = 47.2
+desired_time = 100
 
 ########################## GRID OPTIONS
 grid = False
@@ -58,7 +56,7 @@ points = np.linspace(Point1, Point2, numPoints)
 use_csv=False
 #################### IF YOU WANT TO USE A CSV FILE ############################
 if use_csv:
-    filename = 'ShannonCenter.csv'
+    filename = 'line_points.csv'
     file_path = os.path.join(output_directory, filename)
     # Load the data from the CSV file
     points = np.loadtxt(file_path, delimiter=',')
@@ -120,6 +118,7 @@ if Line == True:
         # Extract horizontal components based on user input
         U_x = U[:, 0]  # X component of velocity
         U_y = U[:, 1]  # Y component of velocity
+        U_x = U[:, 2]  # Z component of velocity
 
         # Initialize sums for alpha_water and velocity components
         total_sum = 0.0
@@ -140,17 +139,17 @@ if Line == True:
                 total_sumX += U_x[i] * differential_length
                 total_sumY += U_y[i] * differential_length
                 Ux = U_x[i] * alpha_water[i]
-                Ux = U_y[i] * alpha_water[i]
-                Umag = np.sqrt((U_x[i]* alpha_water[i])**2 + (U_y[i]* alpha_water[i])**2)
+                Uy = U_y[i] * alpha_water[i]
+                Umag = np.sqrt((U_x[i]* alpha_water[i])**2 + (U_y[i]* alpha_water[i])**2+U_z[i]* alpha_water[i])**2)
 
                 yValue = arc_length[i]
 
                 # Append Umag and arc_length (yValue) for later use
                 umag_list.append(Umag)
                 y_value_list.append(arc_length[i])
-                if alpha_water[i] < 0.01:
-                    alpha_list.append(alpha_water[i])
-                    air_location.append(arc_length[i])
+                
+                alpha_list.append(alpha_water[i])
+                air_location.append(arc_length[i])
 
         # Compute the depth-averaged velocities if depth is greater than zero
         if total_sum > 0.0:
@@ -309,12 +308,7 @@ if Line == True:
         ###################CONTOUR PLOTS
         # Flatten the data properly by ensuring the lengths of X, Y, and Z match
         # Flatten the data properly by ensuring the lengths of X, Y, and Z match
-        X_flat = []
-        Y_flat = []
-        Z_flat = []
-        X_flat2 = []
-        alpha_flat = []
-        airLoc_flat = []
+
 
         # Iterate over the data to flatten it
         for i, case_data in enumerate(case_data_storage_list):
@@ -323,6 +317,13 @@ if Line == True:
             z = case_data[:, 8]  # List of z-values (velocity magnitudes)
             alpha = case_data[:, 9]
             airLoc = case_data[:, 10]
+
+            X_flat = []
+            Y_flat = []
+            Z_flat = []
+            X_flat2 = []
+            alpha_flat = []
+            airLoc_flat = []
 
             # Repeat the x-values for each y and z value
             for xi, yi, zi, alphai,airLoci in zip(x, y, z, alpha,airLoc):
@@ -356,21 +357,30 @@ if Line == True:
 
         # Plotting using tricontourf for scattered data
         # Plotting using tricontourf for scattered data
-        fig, ax = plt.subplots(figsize=(18, 6))  # Define the figure and axes for plotting
+        fig, ax = plt.subplots(figsize=(12, 6))  # Define the figure and axes for plotting
         #plt.figure(figsize=(18, 6))
 
         # Contour plot for velocity magnitude (Z_flat)
         contour = plt.tricontourf(X_flat, Y_flat, Z_flat, 20, cmap='viridis')  # Contour plot for velocity magnitude
+        # Add black contour lines
+        num_black_contours = 5  # Number of black contour lines
+        contour_levels = np.linspace(np.min(Z_flat), np.max(Z_flat), num_black_contours)  # Define levels for the black contours
+
+        # Create black contour lines
+        black_contour = plt.tricontour(X_flat, Y_flat, Z_flat, levels=contour_levels, colors='black', linewidths=1)
+
         cbar = plt.colorbar(contour)
         cbar.set_label('Velocity Magnitude, m/s')  # Customize the label for the color bar
 
-        # Contour plot for alpha (transparency), with varying alpha values
-        contour_alpha = plt.tricontourf(X_flat2, airLoc_flat, alpha_flat, 20, colors=['white'], alpha=1)
+        # Optionally add contour lines
+        tricontour = plt.tricontour(X_flat, Y_flat, alpha_flat, levels=[0.5], colors='white', linewidths=2)
+        plt.clabel(tricontour, fmt={0.5: '0.5 alpha_water'}, fontsize=8)
 
         # Add labels and title
         plt.xlabel("Percentage along the line (%)")
         plt.ylabel("Vertical Location (m)")
         plt.title(f"Velocity contour plot for {cases[caseNum]}")
+        plt.ylim(0.01,0.1)
 
         # Now, use x_values = case_data[:, 0] for the rainbow-colored line
         x_values = case_data[:, 0]  # This is the data for the rainbow-colored line
@@ -410,7 +420,7 @@ if Line == True:
     # Plot 1: Depth (alpha_arc_integral)
     plt.figure()
     for i, case_data in enumerate(case_data_storage_list):
-        plt.plot(case_data[:, 0], case_data[:, 4], marker='o', label=case_labels[i])
+        plt.plot(case_data[:, 0], case_data[:, 4], label=case_labels[i])
     plt.xlabel('Relative Position along the Line (%)')
     plt.ylabel('Depth')
     plt.title('Depth vs Relative Position along the Line')
@@ -424,7 +434,7 @@ if Line == True:
     # Plot 2: Depth-Averaged Velocity
     plt.figure()
     for i, case_data in enumerate(case_data_storage_list):
-        plt.plot(case_data[:, 0], case_data[:, 5], marker='o', label=case_labels[i])
+        plt.plot(case_data[:, 0], case_data[:, 5], label=case_labels[i])
     plt.xlabel('Relative Position along the Line (%)')
     plt.ylabel('Depth-Averaged Velocity (m/s)')
     plt.title('Depth-Averaged Velocity vs Relative Position')
@@ -438,7 +448,7 @@ if Line == True:
     # Plot 3: Froude Number
     plt.figure()
     for i, case_data in enumerate(case_data_storage_list):
-        plt.plot(case_data[:, 0], case_data[:, 6], marker='o', label=case_labels[i])
+        plt.plot(case_data[:, 0], case_data[:, 6], label=case_labels[i])
     plt.xlabel('Relative Position along the Line (%)')
     plt.ylabel('Froude Number')
     plt.title('Froude Number vs Relative Position')
