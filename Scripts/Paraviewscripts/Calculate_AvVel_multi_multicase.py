@@ -125,6 +125,8 @@ if Line == True:
         total_sumX = 0.0
         total_sumY = 0.0
 
+        first_valid_arc_length = None
+
         # Create a list to store Umag and yValue for each point
         umag_list = []
         y_value_list = []
@@ -134,6 +136,10 @@ if Line == True:
         # Loop through the data to calculate the integrals
         for i in range(1, len(U)):
             if not np.isnan(U_x[i]) and not np.isnan(arc_length[i]) and not np.isnan(arc_length[i-1]):
+                # Find the first valid arc_length to subtract from (only once)
+                if first_valid_arc_length is None:  # If this is the first valid arc_length
+                    # Set the first valid arc_length
+                    first_valid_arc_length = arc_length[i]
                 differential_length = arc_length[i] - arc_length[i-1]
                 total_sum += differential_length*alpha_water[i]
                 total_sumX += U_x[i] * differential_length
@@ -146,7 +152,7 @@ if Line == True:
 
                 # Append Umag and arc_length (yValue) for later use
                 umag_list.append(Umag)
-                y_value_list.append(arc_length[i])
+                y_value_list.append(arc_length[i]-first_valid_arc_length)
                 
                 alpha_list.append(alpha_water[i])
                 air_location.append(arc_length[i])
