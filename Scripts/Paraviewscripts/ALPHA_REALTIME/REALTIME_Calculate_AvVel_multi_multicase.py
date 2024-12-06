@@ -476,7 +476,7 @@ if Line == True:
             plt.subplots_adjust(left=0.1, right=1.0, bottom=0.1)  # Adjust margins to reduce whitespace
 
             # Save the plot
-            png_filename = os.path.join(output_directory, f"{str(time_steps_to_process)}_Velocity contour plot.png")
+            png_filename = os.path.join(output_directory, f"{str(time_step)}_Velocity contour plot.png")
             plt.savefig(png_filename)
             plt.close()
             # Generate case labels from the cases list
