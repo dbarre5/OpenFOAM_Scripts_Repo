@@ -273,8 +273,18 @@ if Line == True:
                     vertical_min = domain_bounds[4] - 0.05 * (domain_bounds[5] - domain_bounds[4])
                     vertical_max = domain_bounds[5] + 0.05 * (domain_bounds[5] - domain_bounds[4])
 
+
                 # Loop through all points
                 start_time = time.time()
+                for i, point in enumerate(points):
+                    x, y, z = point  # Unpack the coordinates
+                    if i == 0:
+                        cumulative_distance = 0  # First point has zero cumulative distance
+                    else:
+                        # Calculate Euclidean distance from the previous point to the current point
+                        prev_point = points[i - 1]
+                        cumulative_distance = np.linalg.norm(np.array(point) - np.array(prev_point)) + cumulative_distance
+                total_distance = cumulative_distance
                 for i, point in enumerate(points):
                     x, y, z = point  # Unpack the coordinates
 
@@ -286,11 +296,6 @@ if Line == True:
                         prev_point = points[i - 1]
                         cumulative_distance = np.linalg.norm(np.array(point) - np.array(prev_point)) + cumulative_distance
 
-                    # Calculate the total distance from the first point to the last point
-                    if i == len(points) - 1:
-                        total_distance = cumulative_distance
-                    else:
-                        total_distance = np.linalg.norm(np.array(points[-1]) - np.array(points[0]))
                     if args.use_station is not None:
                         relative_position = cumulative_distance + args.use_station
                         Position_Name = "Absolute"
