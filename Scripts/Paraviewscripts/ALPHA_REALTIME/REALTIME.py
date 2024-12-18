@@ -12,10 +12,10 @@ parser = argparse.ArgumentParser(description='Process some OpenFOAM data.')
 parser.add_argument('--desired_time', type=str, help='Specific time step (e.g., "latest" or a specific time like "10.0")')
 parser.add_argument('--allTimes', action='store_true', help='Process all available time steps')
 parser.add_argument('--case', type=str, help='The OpenFOAM case directory, does nothing right now')
-
 # New optional argument --use_station that accepts a float value
 parser.add_argument('--use_station', type=float, help='Enable station positioning with a specific starting point (e.g., 0.0)')
-
+# Optional flag to convert to feet
+parser.add_argument('--convertToFeet', action='store_true', help='Convert values to feet assuming your simulation is in meters')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -90,7 +90,11 @@ for i in range(len(pointSet)):
         print(f"Error: Point set '{pointSet[i]['name']}' has an invalid 'type' specified: {point_type}")
         continue  # Skip processing this point set
 
-
+factor = 1.0
+YLabel_Unit = 'm'
+if args.convertToFeet:
+    factor = 3.28
+    YLabel_Unit = 'ft'
 Line=True
 if Line == True:
     #initialize the data_storage for all cases to plot later
@@ -284,7 +288,7 @@ if Line == True:
                         # Calculate Euclidean distance from the previous point to the current point
                         prev_point = points[i - 1]
                         cumulative_distance = np.linalg.norm(np.array(point) - np.array(prev_point)) + cumulative_distance
-                total_distance = cumulative_distance
+                total_distance = cumulative_distance/factor
                 for i, point in enumerate(points):
                     x, y, z = point  # Unpack the coordinates
 
@@ -294,12 +298,14 @@ if Line == True:
                     else:
                         # Calculate Euclidean distance from the previous point to the current point
                         prev_point = points[i - 1]
-                        cumulative_distance = np.linalg.norm(np.array(point) - np.array(prev_point)) + cumulative_distance
-
+                        cumulative_distance = (np.linalg.norm(np.array(point) - np.array(prev_point)))/factor + cumulative_distance
+                    
                     if args.use_station is not None:
                         relative_position = cumulative_distance + args.use_station
                         Position_Name = "Absolute"
                         Position_Unit = "m"
+                        if args.convertToFeet:
+                            Position_Unit = "ft"
                     # Calculate the relative position based on the total distance
                     else:
                         relative_position = (cumulative_distance / total_distance) * 100
@@ -357,24 +363,24 @@ if Line == True:
 
                         # Iterate through the VTK arrays and get values
                         for i in range(verticalValList.GetNumberOfValues()):
-                            vert_values.append(verticalValList.GetValue(i))
+                            vert_values.append(verticalValList.GetValue(i)/factor)
                             
                         for i in range(VelList.GetNumberOfValues()):
-                            velocities.append(VelList.GetValue(i))
+                            velocities.append(VelList.GetValue(i)/factor)
                         
                         for i in range(alphaList.GetNumberOfValues()):
                             alphas.append(alphaList.GetValue(i))
                         for i in range(airLocList.GetNumberOfValues()):
-                            airLocs.append(airLocList.GetValue(i))
+                            airLocs.append(airLocList.GetValue(i)/factor)
                         for i in range(bottomList.GetNumberOfValues()):
-                            bottomLocs.append((bottomList.GetValue(i)))
+                            bottomLocs.append((bottomList.GetValue(i)/factor))
                             
                         
                         
                         # Store depth_avg_velocity as a magnitude
                         depth_avg_velocity_mag = np.sqrt(depth_avg_velocity[0]**2 + depth_avg_velocity[1]**2)
                         
-                        results.append([relative_position, x, y, z, alpha_arc_integral, depth_avg_velocity_mag, froude_number, vert_values, velocities,alphas,airLocs, bottomLocs])
+                        results.append([relative_position, x, y, z, alpha_arc_integral/factor, depth_avg_velocity_mag/factor, froude_number, vert_values, velocities,alphas,airLocs, bottomLocs])
                     else:
                         results.append([relative_position, x, y, z, 0, 0, 0, 0, 0,0,0, 0])  # Assign 0 if no data is found
 
@@ -559,7 +565,7 @@ if Line == True:
                 print("Im plotting case "+str(i))
                 plt.plot(case_data[:, 0], case_data[:, 4], label=case_labels[i])
             plt.xlabel(Position_Name+' Position along the Line ('+Position_Unit+')')
-            plt.ylabel('Depth')
+            plt.ylabel('Depth, ('+YLabel_Unit+')')
             plt.title('Depth vs '+Position_Name+' Position along the Line')
             plt.xlim(np.min(case_data[:, 0]), np.max(case_data[:, 0]))  # Set x-axis limits from 0 to 100
             plt.grid(True)
@@ -573,7 +579,7 @@ if Line == True:
             for i, case_data in enumerate(case_data_storage_list):
                 plt.plot(case_data[:, 0], case_data[:, 5], label=case_labels[i])
             plt.xlabel(Position_Name+' Position along the Line ('+Position_Unit+')')
-            plt.ylabel('Depth-Averaged Velocity (m/s)')
+            plt.ylabel('Depth-Averaged Velocity ('+YLabel_Unit+'/s)')
             plt.title('Depth-Averaged Velocity vs '+Position_Name+' Position')
             plt.xlim(np.min(case_data[:, 0]), np.max(case_data[:, 0]))  # Set x-axis limits from 0 to 100
             plt.grid(True)
