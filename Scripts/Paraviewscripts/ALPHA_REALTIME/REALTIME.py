@@ -580,7 +580,7 @@ if Line == True:
             # Long story short, if we want the bottom surface, we need to grab this first value for each array.
             first_values = np.array([x[0] for x in case_data[:, 11]])
             #case_data[:, 5] is depth. Subtract from bottom values
-            WSE = case_data[:, 4] - first_values
+            WSE = case_data[:, 4] + first_values
             for i, case_data in enumerate(case_data_storage_list):
                 print("Im plotting case "+str(i))
                 plt.plot(case_data[:, 0], WSE, label=case_labels[i])
