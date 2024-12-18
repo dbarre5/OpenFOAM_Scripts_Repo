@@ -494,7 +494,7 @@ if Line == True:
                 #black_contour = plt.tricontour(X_flat, Y_flat, Z_flat, levels=contour_levels, colors='black', linewidths=1)
 
                 cbar = plt.colorbar(contour)
-                cbar.set_label('Velocity Magnitude, m/s',fontsize=14)  # Customize the label for the color bar
+                cbar.set_label('Velocity Magnitude, ('+YLabel_Unit+')/s',fontsize=14)  # Customize the label for the color bar
 
                 # Optionally add contour lines
                 tricontour = plt.tricontour(X_flat, Y_flat, alpha_flat, levels=[0.5], colors='white', linewidths=1)
@@ -510,8 +510,8 @@ if Line == True:
                 ax.plot(X_bottom_flat, Y_bottom_flat, color='black', linestyle='-', linewidth=1)  # This connects all points in the order they appear
 
                 # Add labels and title
-                plt.xlabel("Percentage along the line (%)",fontsize=14)
-                plt.ylabel("Vertical Location (m)",fontsize=14)
+                plt.xlabel("Percentage along the line ("+Position_Unit+")",fontsize=14)
+                plt.ylabel("Vertical Location ("+YLabel_Unit+")",fontsize=14)
                 plt.title(f"Velocity contour plot",fontsize=16)
                 #plt.ylim(0.0,0.1)
 
@@ -571,6 +571,25 @@ if Line == True:
             plt.grid(True)
             plt.legend()
             png_filename = os.path.join(folder_path, pointListName+" depth_plot.png")
+            plt.savefig(png_filename)
+            plt.close()
+
+            # Grab the first element from the list in case_data[n, 11] for all rows. case_data[:,11] is actually a series of arrays that I created so you can create a solid black of 
+            # ground in the plot. It's an array where the first value is bottom location, the last value is some value lower than the bottom location.
+            # Long story short, if we want the bottom surface, we need to grab this first value for each array.
+            first_values = np.array([x[0] for x in case_data[:, 11]])
+            #case_data[:, 5] is depth. Subtract from bottom values
+            WSE = case_data[:, 4] - first_values
+            for i, case_data in enumerate(case_data_storage_list):
+                print("Im plotting case "+str(i))
+                plt.plot(case_data[:, 0], WSE, label=case_labels[i])
+            plt.xlabel(Position_Name+' Position along the Line ('+Position_Unit+')')
+            plt.ylabel('WSE, ('+YLabel_Unit+')')
+            plt.title('WSE vs '+Position_Name+' Position along the Line')
+            plt.xlim(np.min(case_data[:, 0]), np.max(case_data[:, 0]))  # Set x-axis limits from 0 to 100
+            plt.grid(True)
+            plt.legend()
+            png_filename = os.path.join(folder_path, pointListName+" WSE_plot.png")
             plt.savefig(png_filename)
             plt.close()
 
