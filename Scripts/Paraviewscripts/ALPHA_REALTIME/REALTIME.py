@@ -406,8 +406,9 @@ if Line == True:
                 flattened_data_storage = np.array(flattened_data_storage)
                 # Save data_storage to CSV, updated with new columns
                 csv_filename = os.path.join(output_directory, pointListName+"results.csv")
+                headerName=Position_Name+" Position along the Line ("+Position_Unit+"),x,y,z,Depth,depth_avg_velocity,Froude_number"
                 try:
-                    np.savetxt(csv_filename, flattened_data_storage, delimiter=",", header=Position_Name+" Position along the Line ("+Position_Unit+"),x,y,z,Depth,depth_avg_velocity,Froude_number", comments="")
+                    np.savetxt(csv_filename, flattened_data_storage, delimiter=",", header=headerName, comments="")
                     print(f"Results saved to {csv_filename}")
                 except Exception as e:
                     print(f"Error saving CSV file: {e}")
@@ -620,3 +621,21 @@ if Line == True:
             png_filename = os.path.join(folder_path, pointListName+" froude_number_plot.png")
             plt.savefig(png_filename)
             plt.close()
+
+
+            # Create a new column with WSE values (matching the number of rows in flattened_data_storage)
+            WSE_column = WSE.reshape(-1, 1)  # Reshaping WSE to make it a 2D column vector
+
+            # Append the WSE column to the existing flattened_data_storage
+            updated_data_storage = np.hstack((flattened_data_storage, WSE_column))
+
+            # Add the header with WSE
+            headerName += ",WSE"
+
+            # Save the updated data_storage to CSV
+            csv_filename = os.path.join(output_directory, pointListName + "results.csv")
+            try:
+                np.savetxt(csv_filename, updated_data_storage, delimiter=",", header=headerName, comments="")
+                print(f"Results saved to {csv_filename}")
+            except Exception as e:
+                print(f"Error saving CSV file: {e}")
