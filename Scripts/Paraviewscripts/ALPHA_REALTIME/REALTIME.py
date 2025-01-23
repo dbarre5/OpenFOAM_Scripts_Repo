@@ -18,6 +18,7 @@ parser.add_argument('--colormap', type=str, help='Colormap details (palfileName.
 parser.add_argument('--use_station', type=float, help='Enable station positioning with a specific starting point (e.g., 0.0)')
 # Optional flag to convert to feet
 parser.add_argument('--convertToFeet', action='store_true', help='Convert values to feet assuming your simulation is in meters')
+parser.add_argument('--sampleUniformly', type=float, help='Specify the spacing for uniform sampling (in float)')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -37,6 +38,8 @@ if args.desired_time:
     desired_time = float(args.desired_time)  # Convert the folder name to a float (assuming it's a valid time value)
 else:
     desired_time = None  # If no specific time is provided, we'll handle it later
+if args.sampleUniformly:
+    numUniform=int(float(args.sampleUniformly))
 
 #Create distribution of points between point 1 and point 2 for depth calculation
 #Line37
@@ -199,6 +202,10 @@ if Line == True:
                 # Create reusable 'Plot Over Line' and 'Programmable Filter' objects
                 plotOverLine = PlotOverLine(registrationName='PlotOverLine', Input=foam_data)
                 plotOverLine.SamplingPattern = 'Sample At Cell Boundaries'
+                if args.sampleUniformly:
+                    plotOverLine.SamplingPattern = 'Sample Uniformly'
+                    plotOverLine.Resolution = numUniform
+
 
                 programmableFilter = ProgrammableFilter(registrationName='ProgrammableFilter', Input=plotOverLine)
                 programmableFilter.Script = """
