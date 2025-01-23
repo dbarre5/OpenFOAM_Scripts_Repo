@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import matplotlib.colors as mcolors
+from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.cm
 import argparse  # Import argparse
 
@@ -12,6 +13,7 @@ parser = argparse.ArgumentParser(description='Process some OpenFOAM data.')
 parser.add_argument('--desired_time', type=str, help='Specific time step (e.g., "latest" or a specific time like "10.0")')
 parser.add_argument('--allTimes', action='store_true', help='Process all available time steps')
 parser.add_argument('--case', type=str, help='The OpenFOAM case directory, does nothing right now')
+parser.add_argument('--colormap', type=str, help='Colormap details (palfileName.pal, num_discrete, min_value, max_value)')
 # New optional argument --use_station that accepts a float value
 parser.add_argument('--use_station', type=float, help='Enable station positioning with a specific starting point (e.g., 0.0)')
 # Optional flag to convert to feet
@@ -36,10 +38,23 @@ if args.desired_time:
 else:
     desired_time = None  # If no specific time is provided, we'll handle it later
 
+#Create distribution of points between point 1 and point 2 for depth calculation
+#Line37
+Point1=[0.319334,0.240637,6]
+Point2=[0.958215,0.722063,6]
+#Line102
+#Point1=[-0.0831212,0.391173,6]
+#Point2=[-0.249446,1.17356,6]
+##Line0.5
+#Point1=[-0.401,-0.5,6]
+#Point2=[-1.199,-0.5,6]
+
 # Define a list of point sets, each containing the name, type (2Points or CSV), and the relevant points or CSV file
 pointSet = [
-    {"name": "PointSet1", "type": "2Points", "Point1": [0.41, -0.4, 0], "Point2": [1.19, -0.4, 0], "numPoints": 100},  # Direct points
-    {"name": "PointSet2", "type": "CSV", "csv_file": 'line_points.csv'},
+    {"name": "LineA", "type": "2Points", "Point1": [0.319334,0.240637,6], "Point2": [0.948215,0.712063,6], "numPoints": 40},  # Direct points
+    {"name": "LineB", "type": "2Points", "Point1": [-0.0831212,0.391173,6], "Point2": [-0.249446,1.17356,6], "numPoints": 40},  # Direct points
+    {"name": "LineC", "type": "2Points", "Point1": [-0.401,-0.5,6], "Point2": [-1.199,-0.5,6], "numPoints": 40},  # Direct points
+    #{"name": "PointSet2", "type": "CSV", "csv_file": 'line_points.csv'},
     
     
       # CSV file
@@ -95,6 +110,46 @@ YLabel_Unit = 'm'
 if args.convertToFeet:
     factor = 3.28
     YLabel_Unit = 'ft'
+
+
+if args.colormap:
+    colormap_info = args.colormap.split(',')
+    if len(colormap_info) != 4:
+        raise ValueError("The --colormap argument should have exactly 4 components: <pal_file>, <num_discrete>, <min_value>, <max_value>")
+
+    # Extract the parts from the input
+    colormapName = colormap_info[0].strip()
+    try:
+        Pal_num_discrete = int(colormap_info[1].strip())  # Convert to integer
+    except ValueError:
+        raise ValueError("The number of discrete values should be an integer.")
+
+    try:
+        Pal_min_value = float(colormap_info[2].strip())  # Convert to float
+        Pal_max_value = float(colormap_info[3].strip())  # Convert to float
+    except ValueError:
+        raise ValueError("The min and max values should be floating-point numbers.")
+    def read_pal_file(pal_file_path):
+        colors = []
+        with open(pal_file_path, 'r') as f:
+            for line in f:
+                line = line.strip()  # Remove leading/trailing whitespace
+                # Skip empty lines or header lines (e.g., 'PALETTE' or 'AWB Rainbow')
+                if not line or line.startswith('PALETTE') or line.startswith('"'):
+                    continue
+                try:
+                    # Split the line and take the last three values as the RGB components
+                    parts = line.split()
+                    r, g, b = map(int, parts[1:4])  # We ignore the first value (float) and get RGB
+                    # Normalize RGB values to [0, 1]
+                    colors.append([r / 255.0, g / 255.0, b / 255.0])
+                except ValueError:
+                    # If the line doesn't have valid RGB values, skip it
+                    print(f"Skipping invalid line: {line}")
+                    continue
+        return np.array(colors)
+    pal_file_path = os.path.join(output_directory, colormapName)
+    palette = read_pal_file(pal_file_path)
 Line=True
 if Line == True:
     #initialize the data_storage for all cases to plot later
@@ -486,7 +541,10 @@ if Line == True:
                 #plt.figure(figsize=(18, 6))
 
                 # Contour plot for velocity magnitude (Z_flat)
-                contour = plt.tricontourf(X_flat, Y_flat, Z_flat, 200, cmap='viridis')  # Contour plot for velocity magnitude
+                if args.colormap:
+                    contour = plt.tricontourf(X_flat, Y_flat, Z_flat, levels=np.linspace(Pal_min_value, Pal_max_value, Pal_num_discrete), cmap=LinearSegmentedColormap.from_list("custom_cmap", palette))
+                else:   
+                    contour = plt.tricontourf(X_flat, Y_flat, Z_flat, 200, cmap='viridis')  # Contour plot for velocity magnitude
                 # Add black contour lines
                 #num_black_contours = 5  # Number of black contour lines
                 #contour_levels = np.linspace(np.min(Z_flat), np.max(Z_flat), num_black_contours)  # Define levels for the black contours
@@ -498,13 +556,19 @@ if Line == True:
                 cbar.set_label('Velocity Magnitude, ('+YLabel_Unit+')/s',fontsize=14)  # Customize the label for the color bar
 
                 # Optionally add contour lines
-                tricontour = plt.tricontour(X_flat, Y_flat, alpha_flat, levels=[0.5], colors='white', linewidths=1)
+                if args.colormap:
+                    tricontour = plt.tricontour(X_flat, Y_flat, alpha_flat, levels=[0.5], colors='black', linewidths=1)
+                else:
+                    tricontour = plt.tricontour(X_flat, Y_flat, alpha_flat, levels=[0.5], colors='white', linewidths=1)
                 #plt.clabel(tricontour, fmt={0.5: '0.5 alpha_water'}, fontsize=12)
                 #tricontour = plt.tricontour(X_bottom_flat, Y_bottom_flat, ScalarValue, levels=[1], colors='black', linewidths=1)
 
                 # Create filled contour plot from 0.5 to 0, and clip any values above 0.5
                 # Dark Grey Option colors=["#3A3A3A"]
-                contour = ax.tricontourf(X_flat, Y_flat, alpha_flat, levels=np.linspace(0, 0.5, 10), colors=["#440154"], vmin=0, vmax=0.5)
+                if args.colormap:
+                    contour = ax.tricontourf(X_flat, Y_flat, alpha_flat, levels=np.linspace(0, 0.5, 10), colors=["white"], vmin=0, vmax=0.5)
+                else:
+                    contour = ax.tricontourf(X_flat, Y_flat, alpha_flat, levels=np.linspace(0, 0.5, 10), colors=["#440154"], vmin=0, vmax=0.5)
                 for i in range(len(X_bottom_flat) - 1):
                         ax.fill_between([X_bottom_flat[i], X_bottom_flat[i+1]], Y_bottom_flat[i], Y_bottom_flat[i+1], color='black')
 
