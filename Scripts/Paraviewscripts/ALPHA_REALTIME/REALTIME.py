@@ -111,7 +111,7 @@ for i in range(len(pointSet)):
 factor = 1.0
 YLabel_Unit = 'm'
 if args.convertToFeet:
-    factor = 3.28
+    factor = 1/0.3048
     YLabel_Unit = 'ft'
 
 
