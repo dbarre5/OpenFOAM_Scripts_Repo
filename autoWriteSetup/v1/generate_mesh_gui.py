@@ -563,10 +563,10 @@ class App(ctk.CTk):
             self._log(line)
 
         if success:
-            self._log("\n✅ All files generated successfully.")
+            self._log("\n All files generated successfully.")
             messagebox.showinfo("Done", "All files generated successfully!")
         else:
-            self._log(f"\n❌ Error: {error_msg}")
+            self._log(f"\n Error: {error_msg}")
             messagebox.showerror("Generation Error", error_msg)
 
 
