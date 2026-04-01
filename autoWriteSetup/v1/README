@@ -1,0 +1,5 @@
+YOU NEED TO HAVE FILES IN constant/triSurface that are going to be your boundaries
+
+You should not put anything else there until you run this script
+
+Because this detects the edges of those STLS to make the blockMesh
