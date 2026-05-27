@@ -44,33 +44,54 @@ map_range.inputs['To Min'].default_value   = 0.0
 map_range.inputs['To Max'].default_value   = 1.0
 map_range.clamp = True
 
-# --- Color Ramp: ParaView-style Blue -> Green -> Orange ---
 cr = ramp.color_ramp
 cr.interpolation = 'LINEAR'
 cr.elements.new(0.25)
 cr.elements.new(0.50)
 cr.elements.new(0.75)
 
-# Position and color each stop
 stops = [
-    (0.00, (0.086, 0.003, 0.341, 1.0)),   # Deep blue    #160057
-    (0.25, (0.157, 0.588, 0.835, 1.0)),   # Cyan-blue    #2896D5
-    (0.50, (0.400, 0.800, 0.400, 1.0)),   # Green        #66CC66
-    (0.75, (0.980, 0.745, 0.156, 1.0)),   # Amber-orange #FAC028
-    (1.00, (0.705, 0.016, 0.149, 1.0)),   # Deep red     #B40426
+    (0.00, (0.267, 0.005, 0.329, 1.0)),   # Deep purple
+    (0.25, (0.190, 0.408, 0.663, 1.0)),   # Blue-indigo
+    (0.50, (0.128, 0.566, 0.551, 1.0)),   # Teal
+    (0.75, (0.369, 0.788, 0.384, 1.0)),   # Fresh green
+    (1.00, (0.993, 0.906, 0.144, 1.0)),   # Bright yellow
 ]
 
 for i, (pos, color) in enumerate(stops):
-    el = cr.elements[i]
-    el.position = pos
-    el.color = color
-
+    cr.elements[i].position = pos
+    cr.elements[i].color = color
+    
 # --- Links ---
 links.new(geo.outputs['Position'],       sep_xyz.inputs['Vector'])
 links.new(sep_xyz.outputs['Z'],          map_range.inputs['Value'])
 links.new(map_range.outputs['Result'],   ramp.inputs['Fac'])
 links.new(ramp.outputs['Color'],         bsdf.inputs['Color'])
 links.new(bsdf.outputs['BSDF'],          output.inputs['Surface'])
+
+fresnel  = nodes.new('ShaderNodeFresnel')
+mix      = nodes.new('ShaderNodeMixShader')
+emission = nodes.new('ShaderNodeEmission')
+dark     = nodes.new('ShaderNodeEmission')
+
+fresnel.location  = (350, -150)
+mix.location      = (550,    0)
+dark.location     = (350, -300)
+
+emission.inputs['Strength'].default_value = 1.0
+dark.inputs['Color'].default_value        = (0.02, 0.02, 0.02, 1.0)
+dark.inputs['Strength'].default_value     = 1.0
+fresnel.inputs['IOR'].default_value       = 2.5   # controls rim width
+
+links.new(ramp.outputs['Color'],          emission.inputs['Color'])
+links.new(fresnel.outputs['Fac'],         mix.inputs['Fac'])
+links.new(emission.outputs['Emission'],   mix.inputs[1])
+links.new(dark.outputs['Emission'],       mix.inputs[2])
+links.new(mix.outputs['Shader'],          output.inputs['Surface'])
+
+# Replace the bsdf link with:
+links.new(ramp.outputs['Color'],    emission.inputs['Color'])
+#links.new(emission.outputs['Emission'], output.inputs['Surface'])
 
 # Assign material to object
 if obj.data.materials:
