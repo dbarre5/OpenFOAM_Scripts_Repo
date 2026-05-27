@@ -1,0 +1,81 @@
+import bpy
+import bmesh
+
+obj = bpy.context.active_object
+
+if obj is None or obj.type != 'MESH':
+    raise Exception("Select a mesh object first")
+
+# Get Z bounds of the object
+mesh = obj.data
+z_values = [obj.matrix_world @ v.co for v in mesh.vertices]
+z_min = min(v.z for v in z_values)
+z_max = max(v.z for v in z_values)
+
+print(f"Z range: {z_min:.4f} to {z_max:.4f}")
+
+# Create new material
+mat = bpy.data.materials.new(name="Z_Elevation")
+mat.use_nodes = True
+nodes = mat.node_tree.nodes
+links = mat.node_tree.links
+nodes.clear()
+
+# --- Nodes ---
+output   = nodes.new('ShaderNodeOutputMaterial')
+bsdf     = nodes.new('ShaderNodeBsdfDiffuse')
+ramp     = nodes.new('ShaderNodeValToRGB')
+map_range = nodes.new('ShaderNodeMapRange')
+sep_xyz  = nodes.new('ShaderNodeSeparateXYZ')
+geo      = nodes.new('ShaderNodeNewGeometry')
+
+# Layout
+geo.location       = (-600, 0)
+sep_xyz.location   = (-400, 0)
+map_range.location = (-200, 0)
+ramp.location      = (  50, 0)
+bsdf.location      = ( 350, 0)
+output.location    = ( 550, 0)
+
+# --- Map Range: Z -> 0 to 1 ---
+map_range.inputs['From Min'].default_value = z_min
+map_range.inputs['From Max'].default_value = z_max
+map_range.inputs['To Min'].default_value   = 0.0
+map_range.inputs['To Max'].default_value   = 1.0
+map_range.clamp = True
+
+# --- Color Ramp: ParaView-style Blue -> Green -> Orange ---
+cr = ramp.color_ramp
+cr.interpolation = 'LINEAR'
+cr.elements.new(0.25)
+cr.elements.new(0.50)
+cr.elements.new(0.75)
+
+# Position and color each stop
+stops = [
+    (0.00, (0.086, 0.003, 0.341, 1.0)),   # Deep blue    #160057
+    (0.25, (0.157, 0.588, 0.835, 1.0)),   # Cyan-blue    #2896D5
+    (0.50, (0.400, 0.800, 0.400, 1.0)),   # Green        #66CC66
+    (0.75, (0.980, 0.745, 0.156, 1.0)),   # Amber-orange #FAC028
+    (1.00, (0.705, 0.016, 0.149, 1.0)),   # Deep red     #B40426
+]
+
+for i, (pos, color) in enumerate(stops):
+    el = cr.elements[i]
+    el.position = pos
+    el.color = color
+
+# --- Links ---
+links.new(geo.outputs['Position'],       sep_xyz.inputs['Vector'])
+links.new(sep_xyz.outputs['Z'],          map_range.inputs['Value'])
+links.new(map_range.outputs['Result'],   ramp.inputs['Fac'])
+links.new(ramp.outputs['Color'],         bsdf.inputs['Color'])
+links.new(bsdf.outputs['BSDF'],          output.inputs['Surface'])
+
+# Assign material to object
+if obj.data.materials:
+    obj.data.materials[0] = mat
+else:
+    obj.data.materials.append(mat)
+
+print("Material 'Z_Elevation' applied successfully.")
