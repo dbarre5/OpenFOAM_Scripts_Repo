@@ -1,0 +1,16 @@
+r=1.2
+Layers=7
+passes=$((Layers-1))
+region="( bottom )"
+
+for (( k=1; k<=passes; k++ )); do
+  fk=$(awk -v r="$r" -v Layers="$Layers" -v k="$k" '
+    function pow(x,y){ return exp(y*log(x)) }
+    BEGIN{
+      num = pow(r, Layers-k)   - 1.0
+      den = pow(r, Layers-k+1) - 1.0
+      printf("%.10f\n", num/den)
+    }')
+  echo "pass ${k}: fk=${fk}"
+  refineWallLayer "${region}" ${fk} -overwrite
+done
